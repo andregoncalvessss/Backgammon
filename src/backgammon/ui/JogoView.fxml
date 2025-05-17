@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.image.ImageView?>
+
+<StackPane xmlns="http://javafx.com/javafx"
+           xmlns:fx="http://javafx.com/fxml"
+           fx:controller="backgammon.ui.JogoController">
+
+    <VBox alignment="TOP_CENTER" spacing="10" style="-fx-padding: 20;">
+        <Label text="Backgammon"
+               style="-fx-font-size: 24px; -fx-padding: 10;" />
+
+        <!-- tabuleiro -->
+        <StackPane fx:id="aspectWrapper"
+                   maxWidth="Infinity"
+                   maxHeight="Infinity"
+                   VBox.vgrow="ALWAYS"
+                   style="-fx-background-color: transparent;">
+            <Pane fx:id="tabuleiroContainer"/>
+        </StackPane>
+
+        <!-- Botão lançar dados -->
+        <Button fx:id="botaoLancarDados"
+                text="🎲 Lançar Dados"
+                onAction="#lançarDados"
+                style="-fx-font-size: 18px; -fx-padding: 12 24;" />
+
+        <!-- dados -->
+        <HBox fx:id="containerDados" alignment="CENTER" spacing="10" style="-fx-padding: 10;">
+            <ImageView fx:id="dado1View" fitWidth="50" fitHeight="50"/>
+            <ImageView fx:id="dado2View" fitWidth="50" fitHeight="50"/>
+        </HBox>
+    </VBox>
+</StackPane>
