@@ -1,13 +1,13 @@
 package backgammon.modelo;
 
 public class Peca {
-    private Jogador dono;
+    private final Jogador jogador;
 
-    public Peca(Jogador dono) {
-        this.dono = dono;
+    public Peca(Jogador jogador) {
+        this.jogador = jogador;
     }
 
-    public Jogador getDono() {
-        return dono;
+    public Jogador getJogador() {
+        return jogador;
     }
 }

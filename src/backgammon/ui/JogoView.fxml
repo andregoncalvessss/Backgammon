@@ -6,31 +6,70 @@
 
 <StackPane xmlns="http://javafx.com/javafx"
            xmlns:fx="http://javafx.com/fxml"
-           fx:controller="backgammon.ui.JogoController">
+           fx:controller="backgammon.ui.JogoController"
+           fx:id="rootPane">
 
-    <VBox alignment="TOP_CENTER" spacing="10" style="-fx-padding: 20;">
-        <Label text="Backgammon"
-               style="-fx-font-size: 24px; -fx-padding: 10;" />
+    <!-- Background que cobre tudo -->
+    <ImageView fx:id="backgroundView"
+               pickOnBounds="true"
+               preserveRatio="false" />
 
-        <!-- tabuleiro -->
-        <StackPane fx:id="aspectWrapper"
-                   maxWidth="Infinity"
-                   maxHeight="Infinity"
-                   VBox.vgrow="ALWAYS"
-                   style="-fx-background-color: transparent;">
-            <Pane fx:id="tabuleiroContainer"/>
-        </StackPane>
+    <!-- Layout principal horizontal -->
+    <HBox alignment="CENTER" spacing="20" style="-fx-padding: 20;" maxWidth="Infinity">
 
-        <!-- Botão lançar dados -->
-        <Button fx:id="botaoLancarDados"
-                text="🎲 Lançar Dados"
-                onAction="#lançarDados"
-                style="-fx-font-size: 18px; -fx-padding: 12 24;" />
+        <!-- Área central (tabuleiro + dados) -->
+        <VBox alignment="TOP_CENTER" spacing="10" style="-fx-padding: 10;" HBox.hgrow="ALWAYS">
 
-        <!-- dados -->
-        <HBox fx:id="containerDados" alignment="CENTER" spacing="10" style="-fx-padding: 10;">
-            <ImageView fx:id="dado1View" fitWidth="50" fitHeight="50"/>
-            <ImageView fx:id="dado2View" fitWidth="50" fitHeight="50"/>
-        </HBox>
-    </VBox>
+            <Label text="BACKGAMMON"
+                   style="-fx-font-size: 35px; -fx-font-weight: bold; -fx-text-fill: white; -fx-padding: 10;" />
+
+            <!-- Container para label do turno -->
+            <AnchorPane prefHeight="40" maxWidth="Infinity" minHeight="40">
+                <Label fx:id="labelTurno"
+                       text="SUA VEZ"
+                       layoutX="10" layoutY="0"
+                       style="-fx-font-size: 38px; -fx-font-weight: bold; -fx-text-fill: white; -fx-text-transform: uppercase;" />
+            </AnchorPane>
+
+            <!-- Wrapper para o tabuleiro -->
+            <StackPane fx:id="aspectWrapper"
+                       maxWidth="Infinity"
+                       maxHeight="Infinity"
+                       VBox.vgrow="ALWAYS"
+                       style="-fx-background-color: transparent;">
+                <StackPane fx:id="tabuleiroContainer" />
+            </StackPane>
+
+            <!-- Botão para lançar dados -->
+            <Button fx:id="botaoLancarDados"
+                    text="🎲 Lançar Dados"
+                    onAction="#lancarDados"
+                    style="-fx-font-size: 18px; -fx-padding: 12 24;"
+                    maxWidth="200" />
+
+            <!-- Dados (imagem dos dados) -->
+            <HBox alignment="CENTER" spacing="20" style="-fx-padding: 10 0 0 0;">
+                <ImageView fx:id="dado1View" fitWidth="50" fitHeight="50"/>
+                <ImageView fx:id="dado2View" fitWidth="50" fitHeight="50"/>
+                <ImageView fx:id="dado3View" fitWidth="50" fitHeight="50"/>
+                <ImageView fx:id="dado4View" fitWidth="50" fitHeight="50"/>
+            </HBox>
+
+        </VBox>
+
+        <!-- Área lateral direita para peças capturadas -->
+        <VBox fx:id="pecasCapturadasView"
+              alignment="TOP_CENTER"
+              spacing="10"
+              style="-fx-padding: 10; -fx-background-color: rgba(255,255,255,0.1); -fx-border-color: white; -fx-border-width: 2;"
+              minWidth="100"
+              maxWidth="120">
+
+            <Label text="Capturadas"
+                   style="-fx-font-size: 16px; -fx-text-fill: white; -fx-font-weight: bold;" />
+
+        </VBox>
+
+    </HBox>
+
 </StackPane>

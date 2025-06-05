@@ -1,41 +1,40 @@
 package backgammon.modelo;
 
-import java.util.Stack;
+import java.util.ArrayList;
+import java.util.List;
 
 public class Campo {
-    private int id;
-    private Stack<Peca> pecas;
+    private final int id;
+    private final List<Peca> pecas;
 
     public Campo(int id) {
         this.id = id;
-        this.pecas = new Stack<>();
+        this.pecas = new ArrayList<>();
     }
+
+    public int getId() { return id; }
+
+    public List<Peca> getPecas() { return pecas; }
 
     public void adicionarPeca(Peca peca) {
-        pecas.push(peca);
+        pecas.add(peca);
     }
 
-    public Peca removerPeca() {
-        return pecas.isEmpty() ? null : pecas.pop();
+    public void removerPeca(Peca peca) {
+        pecas.remove(peca);
     }
 
-    public Peca topo() {
-        return pecas.isEmpty() ? null : pecas.peek();
+    public boolean temPecas() {
+        return !pecas.isEmpty();
     }
 
-    public int contarPecas() {
-        return pecas.size();
+    public Peca getTopo() {
+        if (pecas.isEmpty()) return null;
+        return pecas.get(pecas.size() - 1);
     }
 
-    public boolean estaVazio() {
-        return pecas.isEmpty();
-    }
-
-    public int getId() {
-        return id;
-    }
-
-    public Stack<Peca> getPecas() {
-        return pecas;
+    // --- NOVO MÉTODO: Verifica se há pelo menos uma peça deste jogador neste campo ---
+    public boolean temPecasDoJogador(Jogador jogador) {
+        return pecas.stream().anyMatch(p -> p.getJogador() == jogador);
     }
 }
