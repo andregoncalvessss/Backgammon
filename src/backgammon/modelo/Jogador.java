@@ -1,0 +1,102 @@
+package backgammon.modelo;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Random;
+
+public class Jogador {
+    private List<Peca> pecas;
+    private List<Integer> dadosDisponiveis;
+    private List<Integer> ultimosDados;
+    private String nome;
+
+    private final List<Peca> pecasCapturadas = new ArrayList<>();
+
+    public Jogador(String nome) {
+        this.nome = nome;
+        this.pecas = new ArrayList<>();
+        for (int i = 0; i < 15; i++) {
+            pecas.add(new Peca(this));
+        }
+        dadosDisponiveis = new ArrayList<>();
+        ultimosDados = new ArrayList<>();
+    }
+
+    public String getNome() {
+        return nome;
+    }
+
+    public void setNome(String nome) {
+        this.nome = nome;
+    }
+
+    public void rolarDados() {
+        dadosDisponiveis.clear();
+        ultimosDados.clear();
+        Random r = new Random();
+        int d1 = r.nextInt(6) + 1;
+        int d2 = r.nextInt(6) + 1;
+        if (d1 == d2) {
+            for (int i = 0; i < 4; i++) {
+                dadosDisponiveis.add(d1);
+                ultimosDados.add(d1);
+            }
+        } else {
+            dadosDisponiveis.add(d1);
+            dadosDisponiveis.add(d2);
+            ultimosDados.add(d1);
+            ultimosDados.add(d2);
+        }
+        System.out.println("Jogador " + nome + " lançou dados: " + ultimosDados);
+    }
+
+
+    public List<Integer> getDadosDisponiveis() {
+        return dadosDisponiveis;
+    }
+
+    public List<Integer> getUltimosDados() {
+        return ultimosDados;
+    }
+
+    public boolean usarDado(int valor) {
+        return dadosDisponiveis.remove(Integer.valueOf(valor));
+    }
+
+    public List<Peca> getPecas() {
+        return pecas;
+    }
+
+    public Peca retiraPeca() {
+        if (!pecas.isEmpty()) {
+            return pecas.remove(0);
+        }
+        return null;
+    }
+
+    // 🔽 NOVO: Captura e reentrada
+
+    public List<Peca> getPecasCapturadas() {
+        return pecasCapturadas;
+    }
+
+    public void capturarPeca(Peca peca) {
+        pecasCapturadas.add(peca);
+    }
+
+    public boolean temPecasCapturadas() {
+        return !pecasCapturadas.isEmpty();
+    }
+
+    public Peca libertarPecaCapturada() {
+        if (!pecasCapturadas.isEmpty()) {
+            return pecasCapturadas.remove(0);
+        }
+        return null;
+    }
+
+    @Override
+    public String toString() {
+        return nome;
+    }
+}
