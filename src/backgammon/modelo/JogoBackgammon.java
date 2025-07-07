@@ -298,6 +298,14 @@ public class JogoBackgammon {
             return camposMoveis;
         }
 
+<<<<<<< HEAD
+=======
+        if (jogadorAtual.getDadosDisponiveis().isEmpty()) {
+            System.out.println("Jogador atual não tem dados disponíveis. Nenhum campo móvel.");
+            return camposMoveis; // Retorna vazio se não houver dados
+        }
+
+>>>>>>> 6df0c78 (ultimo commit)
         for (Map.Entry<Integer, Campo> entry : campos.entrySet()) {
             int campoId = entry.getKey();
             Campo campo = entry.getValue();
@@ -516,9 +524,17 @@ public class JogoBackgammon {
         }
         if (nomeTrimmed.equalsIgnoreCase(jogador1.getNome())) {
             jogadorAtual = jogador1;
+<<<<<<< HEAD
             System.out.println("[" + new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()) + "] Jogador atual definido: " + jogadorAtual.getNome());
         } else if (nomeTrimmed.equalsIgnoreCase(jogador2.getNome())) {
             jogadorAtual = jogador2;
+=======
+            jogadorAtual.rolarDados(); // Garante que os dados estão disponíveis
+            System.out.println("[" + new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()) + "] Jogador atual definido: " + jogadorAtual.getNome());
+        } else if (nomeTrimmed.equalsIgnoreCase(jogador2.getNome())) {
+            jogadorAtual = jogador2;
+            jogadorAtual.rolarDados(); // Garante que os dados estão disponíveis
+>>>>>>> 6df0c78 (ultimo commit)
             System.out.println("[" + new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()) + "] Jogador atual definido: " + jogadorAtual.getNome());
         } else {
             System.err.println("[" + new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()) + "] Erro: Nome do jogador inicial não corresponde a nenhum jogador. Recebido: '" + nomeTrimmed + "', Jogador1: '" + jogador1.getNome() + "', Jogador2: '" + jogador2.getNome() + "'");

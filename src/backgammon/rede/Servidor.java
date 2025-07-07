@@ -473,6 +473,7 @@ public class Servidor {
                 dadosStr.append(dado).append(",");
             }
             dadosStr.deleteCharAt(dadosStr.length() - 1);
+<<<<<<< HEAD
         } else {
             System.out.println("[" + new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()) + "] Nenhum dado disponível para enviar no estado do jogo.");
             return;
@@ -482,19 +483,49 @@ public class Servidor {
             try {
                 if (!c.socket.isClosed()) {
                     if (c.nome.equals(jogo.getJogadorAtual().getNome())) {
+=======
+        }
+
+        boolean semDados = jogo.getJogadorAtual().getDadosDisponiveis().isEmpty();
+        boolean semMovimentos = jogo.getCamposComPecasMoveis().isEmpty();
+
+        // Corrigir: garantir que o jogadorAtual do servidor está sempre sincronizado com o nome do jogador que deve jogar
+        String nomeJogadorAtual = jogo.getJogadorAtual() != null ? jogo.getJogadorAtual().getNome() : null;
+
+        for (ClienteInfo c : new ArrayList<>(clientes)) {
+            try {
+                if (!c.socket.isClosed()) {
+                    // Garante que o comando SUA_VEZ é enviado para o jogador correto
+                    if (nomeJogadorAtual != null && c.nome.equals(nomeJogadorAtual)) {
+>>>>>>> 6df0c78 (ultimo commit)
                         c.out.println("SUA_VEZ");
                     } else {
                         c.out.println("VEZ_ADV");
                     }
                     c.out.println(dadosStr.toString());
                     c.out.flush();
+<<<<<<< HEAD
                     System.out.println("[" + new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()) + "] Enviado para " + c.nome + ": " + (c.nome.equals(jogo.getJogadorAtual().getNome()) ? "SUA_VEZ" : "VEZ_ADV") + ", " + dadosStr);
+=======
+                    System.out.println("[" + new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()) + "] Enviado para " + c.nome + ": " + (c.nome.equals(nomeJogadorAtual) ? "SUA_VEZ" : "VEZ_ADV") + ", " + dadosStr);
+>>>>>>> 6df0c78 (ultimo commit)
                 }
             } catch (Exception e) {
                 System.err.println("[" + new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()) + "] Erro ao enviar estado do jogo para " + c.nome + ": " + e.getMessage());
                 handleClientDisconnect(c);
             }
         }
+<<<<<<< HEAD
+=======
+
+        // Lógica para passar o turno automaticamente se não houver dados ou movimentos possíveis
+        if ((semDados || semMovimentos) && jogoJaComecou.get()) {
+            System.out.println("[" + new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()) + "] Passando turno automaticamente: sem dados ou sem movimentos possíveis.");
+            jogo.verificarEFinalizarTurno();
+            // Envia novo estado após passar turno
+            sendGameStateToAll();
+        }
+>>>>>>> 6df0c78 (ultimo commit)
     }
 
     private void decideInitialPlayer() {
@@ -564,6 +595,18 @@ public class Servidor {
 
                 // Set initial player and update game state with winner's dice
                 jogo.definirJogadorInicial(nomeVencedor);
+<<<<<<< HEAD
+=======
+
+                // Corrigir: garantir que os dados do vencedor são aplicados ao jogadorAtual
+                jogo.getJogadorAtual().getDadosDisponiveis().clear();
+                jogo.getJogadorAtual().getUltimosDados().clear();
+                jogo.getJogadorAtual().getDadosDisponiveis().add(winnerDice[0]);
+                jogo.getJogadorAtual().getDadosDisponiveis().add(winnerDice[1]);
+                jogo.getJogadorAtual().getUltimosDados().add(winnerDice[0]);
+                jogo.getJogadorAtual().getUltimosDados().add(winnerDice[1]);
+
+>>>>>>> 6df0c78 (ultimo commit)
                 jogo.iniciarTurno();
                 jogoJaComecou.set(true);
                 sortitionPhase.set(false);
@@ -571,6 +614,12 @@ public class Servidor {
                 sorteioInicial.clear();
                 dadosSorteio.clear();
 
+<<<<<<< HEAD
+=======
+                // Corrigir: garantir que o jogadorAtual do servidor está correto antes de enviar comandos
+                String nomeJogadorAtual = jogo.getJogadorAtual() != null ? jogo.getJogadorAtual().getNome() : null;
+
+>>>>>>> 6df0c78 (ultimo commit)
                 synchronized (clientes) {
                     for (ClienteInfo c : new ArrayList<>(clientes)) {
                         if (c.socket.isClosed()) {
@@ -579,7 +628,11 @@ public class Servidor {
                             return;
                         }
                         System.out.println("[" + new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()) + "] Enviando mensagens de início do jogo para " + c.nome);
+<<<<<<< HEAD
                         if (c.nome.equals(nomeVencedor)) {
+=======
+                        if (c.nome.equals(nomeJogadorAtual)) {
+>>>>>>> 6df0c78 (ultimo commit)
                             c.out.println("VOCE_COMECA");
                             c.out.println("SUA_VEZ");
                         } else {
