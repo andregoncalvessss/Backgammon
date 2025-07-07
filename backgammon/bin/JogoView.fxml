@@ -1,0 +1,110 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.image.ImageView?>
+
+<StackPane xmlns="http://javafx.com/javafx"
+           xmlns:fx="http://javafx.com/fxml"
+           fx:controller="backgammon.ui.JogoController"
+           fx:id="rootPane">
+
+    <!-- Background que cobre tudo -->
+    <ImageView fx:id="backgroundView"
+               pickOnBounds="true"
+               preserveRatio="false" />
+
+    <!-- Layout principal horizontal -->
+    <HBox alignment="CENTER" spacing="20" style="-fx-padding: 20;" maxWidth="Infinity">
+
+        <!-- Área lateral esquerda para chat -->
+        <VBox alignment="BOTTOM_LEFT" spacing="10"
+              VBox.vgrow="ALWAYS"
+              style="-fx-padding: 10; -fx-background-color: rgba(0,0,0,0.1); -fx-border-color: white; -fx-border-width: 2;" minWidth="150">
+            <Label text="Chat"
+                   style="-fx-font-size: 16px; -fx-text-fill: white; -fx-font-weight: bold;" />
+            <ScrollPane fitToWidth="true" fitToHeight="true" prefHeight="300" maxHeight="300" style="-fx-background-color: transparent;">
+                <content>
+                    <VBox fx:id="chatMensagensBox" spacing="6" style="-fx-padding: 5;">
+                        <!-- Mensagens serão adicionadas aqui pelo controlador -->
+                    </VBox>
+                </content>
+            </ScrollPane>
+            <HBox spacing="5" alignment="CENTER_LEFT">
+                <TextField fx:id="campoChat"
+                           promptText="Escreve aqui..."
+                           HBox.hgrow="ALWAYS"/>
+                <Button fx:id="botaoEnviarChat"
+                        text="Enviar"
+                        onAction="#sendChatMessage"/>
+            </HBox>
+        </VBox>
+
+        <!-- Área central (tabuleiro + dados) -->
+        <VBox alignment="TOP_CENTER" spacing="10" style="-fx-padding: 10;" HBox.hgrow="ALWAYS">
+
+            <Label text="BACKGAMMON"
+                   style="-fx-font-size: 35px; -fx-font-weight: bold; -fx-text-fill: white; -fx-padding: 10;" />
+
+            <!-- Container para label do turno -->
+            <AnchorPane prefHeight="40" maxWidth="Infinity" minHeight="40">
+                <Label fx:id="labelTurno"
+                       text="SUA VEZ"
+                       layoutX="10" layoutY="0"
+                       style="-fx-font-size: 38px; -fx-font-weight: bold; -fx-text-fill: white; -fx-text-transform: uppercase;" />
+            </AnchorPane>
+
+            <!-- Wrapper para o tabuleiro -->
+            <StackPane fx:id="aspectWrapper"
+                       maxWidth="Infinity"
+                       maxHeight="Infinity"
+                       VBox.vgrow="ALWAYS"
+                       style="-fx-background-color: transparent;">
+                <StackPane fx:id="tabuleiroContainer" />
+            </StackPane>
+
+            <!-- Botão para lançar dados -->
+            <Button fx:id="botaoLancarDados"
+                    text="🎲 Lançar Dados"
+                    onAction="#rollDice"
+                    style="-fx-font-size: 18px; -fx-padding: 12 24;"
+                    maxWidth="200"
+                    disable="false"/>
+
+            <!-- Dados (imagem dos dados) -->
+            <HBox fx:id="dadosContainer"
+                  alignment="CENTER"
+                  spacing="20"
+                  style="-fx-padding: 10 0 0 0;"
+                  maxWidth="Infinity"
+                  prefHeight="60">
+                <!-- Dados do jogador local -->
+                <ImageView fx:id="dado1View" fitWidth="50" fitHeight="50"/>
+                <ImageView fx:id="dado2View" fitWidth="50" fitHeight="50"/>
+
+                <!-- Espaço separador -->
+                <Region prefWidth="40"/>
+
+                <!-- Dados do adversário -->
+                <ImageView fx:id="dado3View" fitWidth="50" fitHeight="50"/>
+                <ImageView fx:id="dado4View" fitWidth="50" fitHeight="50"/>
+            </HBox>
+
+        </VBox>
+
+        <!-- Área lateral direita para peças capturadas -->
+        <VBox fx:id="pecasCapturadasView"
+              alignment="TOP_CENTER"
+              spacing="10"
+              style="-fx-padding: 10; -fx-background-color: rgba(255,255,255,0.1); -fx-border-color: white; -fx-border-width: 2;"
+              minWidth="100"
+              maxWidth="120">
+
+            <Label text="Capturadas"
+                   style="-fx-font-size: 16px; -fx-text-fill: white; -fx-font-weight: bold;" />
+
+        </VBox>
+
+    </HBox>
+
+</StackPane>

@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<VBox xmlns="http://javafx.com/javafx"
+      xmlns:fx="http://javafx.com/fxml"
+      fx:controller="backgammon.ui.ClienteController"
+      spacing="15" alignment="CENTER"
+      prefWidth="1280" prefHeight="720"
+      style="-fx-padding: 20; -fx-background-image: url('/background.jpg'); -fx-background-size: cover; -fx-text-fill: white;">
+
+    <HBox alignment="CENTER" spacing="10" prefWidth="Infinity">
+        <Label text="Nome:" style="-fx-text-fill: white; -fx-font-size: 18px;" />
+        <TextField fx:id="campoNome" promptText="Insere o teu nome" prefWidth="180"/>
+    </HBox>
+
+    <Button text="Jogar" fx:id="botaoJogar" onAction="#aoClicarJogar" style="-fx-font-size: 18px; -fx-padding: 10px 30px;"/>
+
+    <Label fx:id="labelEstado" text="À espera de ligação ao servidor..." style="-fx-text-fill: white; -fx-font-size: 18px;" />
+</VBox>

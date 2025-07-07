@@ -1,0 +1,27 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "type": "java",
+      "name": "ServidorMain",
+      "request": "launch",
+      "mainClass": "backgammon.ServidorMain",
+      "vmArgs": "--module-path ${workspaceFolder}/javafx-sdk-24.0.1/lib --add-modules javafx.controls,javafx.fxml --enable-native-access=ALL-UNNAMED",
+      "classPaths": [
+        "${workspaceFolder}/bin",
+        "${workspaceFolder}/resources"
+      ]
+    },
+    {
+      "type": "java",
+      "name": "ClienteMain",
+      "request": "launch",
+      "mainClass": "backgammon.ClienteMain",
+      "vmArgs": "--module-path ${workspaceFolder}/javafx-sdk-24.0.1/lib --add-modules javafx.controls,javafx.fxml --enable-native-access=ALL-UNNAMED",
+      "classPaths": [
+        "${workspaceFolder}/bin",
+        "${workspaceFolder}/resources"
+      ]
+    }
+  ]
+}
