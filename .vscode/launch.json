@@ -1,0 +1,39 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "java",
+            "name": "ClienteMain",
+            "request": "launch",
+            "mainClass": "ClienteMain",
+            "projectName": "backgammon_14cd0e"
+        },
+        {
+            "type": "java",
+            "name": "ServidorMain",
+            "request": "launch",
+            "mainClass": "ServidorMain",
+            "projectName": "backgammon_14cd0e"
+        },
+        {
+            "type": "java",
+            "name": "Current File",
+            "request": "launch",
+            "mainClass": "${file}"
+        },
+        {
+            "type": "java",
+            "name": "ClienteMain",
+            "request": "launch",
+            "mainClass": "backgammon.ClienteMain",
+            "projectName": "backgammon_14cd0e"
+        },
+        {
+            "type": "java",
+            "name": "ServidorMain",
+            "request": "launch",
+            "mainClass": "backgammon.ServidorMain",
+            "projectName": "backgammon_14cd0e"
+        }
+    ]
+}

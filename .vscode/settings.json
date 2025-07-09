@@ -1,0 +1,10 @@
+{
+    "java.project.sourcePaths": [
+        "backgammon/src",
+        "backgammon/src/resources"
+    ],
+    "java.project.outputPath": "backgammon/bin",
+    "java.project.referencedLibraries": [
+        "backgammon/javafx-sdk-24.0.1/lib/*.jar"
+    ]
+}

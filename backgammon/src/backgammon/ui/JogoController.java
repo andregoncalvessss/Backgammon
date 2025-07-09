@@ -27,7 +27,6 @@ import javafx.util.Duration;
 import java.io.IOException;
 import java.net.Socket;
 import java.util.*;
-import java.util.stream.Collectors;
 
 public class JogoController implements Cliente.MessageListener {
     @FXML
@@ -125,13 +124,13 @@ public class JogoController implements Cliente.MessageListener {
         createBearingOffOutline();
         configureListeners();
         if (botaoEnviarChat != null) {
-            botaoEnviarChat.setOnAction(e -> sendChatMessage());
+            botaoEnviarChat.setOnAction(_ -> sendChatMessage());
         }
         if (campoChat != null) {
-            campoChat.setOnAction(e -> sendChatMessage());
+            campoChat.setOnAction(_ -> sendChatMessage());
         }
         if (botaoLancarDados != null) {
-            botaoLancarDados.setOnAction(e -> rollDice());
+            botaoLancarDados.setOnAction(_ -> rollDice());
             botaoLancarDados.setDisable(true);
             labelTurno.setText("Aguardando início do jogo...");
         }
@@ -474,13 +473,13 @@ public class JogoController implements Cliente.MessageListener {
                 }
                 botaoLancarDados.setDisable(true);
                 Timeline timeline = new Timeline();
-                timeline.getKeyFrames().add(new KeyFrame(Duration.millis(50), e -> {
+                timeline.getKeyFrames().add(new KeyFrame(Duration.millis(50), _ -> {
                     Random r = new Random();
                     dado1View.setImage(getDiceImage(r.nextInt(6) + 1));
                     dado2View.setImage(getDiceImage(r.nextInt(6) + 1));
                 }));
                 timeline.setCycleCount(15);
-                timeline.setOnFinished(e -> {
+                timeline.setOnFinished(_ -> {
                     int resultado1 = new Random().nextInt(6) + 1;
                     int resultado2 = new Random().nextInt(6) + 1;
                     dado1View.setImage(getDiceImage(resultado1));
@@ -493,7 +492,7 @@ public class JogoController implements Cliente.MessageListener {
                         addChatMessage("Meu Sorteio: " + resultado1 + " e " + resultado2);
                         minhaVez = false;
                         // Keep aguardandoInicio true until server confirms sortition outcome
-                        Timeline timeout = new Timeline(new KeyFrame(Duration.seconds(10), ev -> {
+                        Timeline timeout = new Timeline(new KeyFrame(Duration.seconds(10), _ -> {
                             if (!minhaVez && aguardandoInicio) {
                                 labelTurno.setText("Timeout aguardando sorteio. Tentando novamente...");
                                 botaoLancarDados.setDisable(false);
@@ -535,13 +534,13 @@ public class JogoController implements Cliente.MessageListener {
 
     private void animateDice() {
         Timeline timeline = new Timeline();
-        timeline.getKeyFrames().add(new KeyFrame(Duration.millis(100), e -> {
+        timeline.getKeyFrames().add(new KeyFrame(Duration.millis(100), _ -> {
             Random r = new Random();
             dado1View.setImage(getDiceImage(r.nextInt(6) + 1));
             dado2View.setImage(getDiceImage(r.nextInt(6) + 1));
         }));
         timeline.setCycleCount(10);
-        timeline.setOnFinished(e -> {
+        timeline.setOnFinished(_ -> {
             updateVisibleDice();
             updateBoard();
             // NÃO chama checkTurnCompletion() aqui!
@@ -653,7 +652,7 @@ public class JogoController implements Cliente.MessageListener {
         container.setMaxSize(Double.MAX_VALUE, Double.MAX_VALUE);
         if (coluna <= 6) container.setPadding(new Insets(0, -40, 20, 40));
         else if (coluna >= 9) container.setPadding(new Insets(0, 40, 20, -40));
-        container.layoutBoundsProperty().addListener((obs, oldB, newB) -> {
+        container.layoutBoundsProperty().addListener((_, _, newB) -> {
             updateTriangleShape(triangulo, newB, cima);
             triangulo.setFill(coluna % 2 == 0 ? Color.SADDLEBROWN : Color.BURLYWOOD);
             triangulo.setStroke(Color.BLACK);
@@ -687,7 +686,7 @@ public class JogoController implements Cliente.MessageListener {
             campoPecasMap.put(campoId, container);
             Polygon triangulo = (Polygon) ((Pane) container.getChildren().get(0)).getChildren().get(0);
             campoTrianguloMap.put(campoId, triangulo);
-            triangulo.setOnMouseClicked(e -> selectField(campoId));
+            triangulo.setOnMouseClicked(_ -> selectField(campoId));
         }
     }
 
@@ -698,13 +697,13 @@ public class JogoController implements Cliente.MessageListener {
     }
 
     private void configureListeners() {
-        tabuleiroContainer.widthProperty().addListener((obs, o, n) -> {
+        tabuleiroContainer.widthProperty().addListener((_, _, _) -> {
             tabuleiro.requestLayout();
             if (!aguardandoInicio) {
                 updateBoard();
             }
         });
-        tabuleiroContainer.heightProperty().addListener((obs, o, n) -> {
+        tabuleiroContainer.heightProperty().addListener((_, _, _) -> {
             tabuleiro.requestLayout();
             if (!aguardandoInicio) {
                 updateBoard();
@@ -784,7 +783,7 @@ public class JogoController implements Cliente.MessageListener {
                     c.setStroke(Color.BLACK);
                     c.setStrokeWidth(1);
                 }
-                c.setOnMouseClicked(e -> selectField(campoId));
+                c.setOnMouseClicked(_ -> selectField(campoId));
 
                 double translateY;
                 if (campoId <= 12) {
@@ -807,7 +806,7 @@ public class JogoController implements Cliente.MessageListener {
                 if (destinoValido) {
                     triangulo.setStroke(Color.LIMEGREEN);
                     triangulo.setStrokeWidth(2);
-                    triangulo.setOnMouseClicked(e -> moveToDestination(campoId));
+                    triangulo.setOnMouseClicked(_ -> moveToDestination(campoId));
                 } else {
                     triangulo.setStroke(Color.BLACK);
                     triangulo.setStrokeWidth(1);
@@ -827,7 +826,7 @@ public class JogoController implements Cliente.MessageListener {
                 rectHeight = tabuleiroContainer.getHeight() * 0.37;
                 rectX = tabuleiroContainer.getWidth() - rectWidth - tabuleiroContainer.getWidth() * 0.036;
                 rectY = tabuleiroContainer.getHeight() * 0.044;
-                bearingOffOutline.setOnMouseClicked(e -> moveToDestination(25));
+                bearingOffOutline.setOnMouseClicked(_ -> moveToDestination(25));
             }
             if (jogo.getJogadorAtual() == jogo.getJogador2() && destinos.contains(0)) {
                 showBearingOff = true;
@@ -835,7 +834,7 @@ public class JogoController implements Cliente.MessageListener {
                 rectHeight = tabuleiroContainer.getHeight() * 0.37;
                 rectX = tabuleiroContainer.getWidth() - rectWidth - tabuleiroContainer.getWidth() * 0.036;
                 rectY = tabuleiroContainer.getHeight() - rectHeight - tabuleiroContainer.getHeight() * 0.044;
-                bearingOffOutline.setOnMouseClicked(e -> moveToDestination(0));
+                bearingOffOutline.setOnMouseClicked(_ -> moveToDestination(0));
             }
         }
 
@@ -858,7 +857,7 @@ public class JogoController implements Cliente.MessageListener {
             c.setFill(capturadas.get(0).getJogador() == jogo.getJogador1() ? Color.WHITE : Color.RED);
             c.setStroke(Color.LIMEGREEN);
             c.setStrokeWidth(3);
-            c.setOnMouseClicked(e -> {
+            c.setOnMouseClicked(_ -> {
                 campoSelecionado = -1;
                 updateBoard();
             });
@@ -909,19 +908,6 @@ public class JogoController implements Cliente.MessageListener {
         }
     }
 
-    private void switchPlayer() {
-        synchronized (lock) {
-            // NÃO altere minhaVez aqui! O servidor enviará SUA_VEZ/VEZ_ADV para cada cliente.
-            if (cliente != null && cliente.isConectado()) {
-                cliente.enviarComando("PASSAR_TURNO");
-                System.out.println("[" + new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()) + "] Enviado comando PASSAR_TURNO");
-            } else {
-                labelTurno.setText("Erro: Não conectado ao servidor.");
-                System.err.println("[" + new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()) + "] Erro: Cliente não conectado ao enviar PASSAR_TURNO");
-            }
-            updateGame();
-        }
-    }
 
     @FXML
     public void sendChatMessage() {

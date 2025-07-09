@@ -61,8 +61,8 @@ public class ClienteController implements Cliente.MessageListener {
         }).start();
 
         if (campoChat != null && botaoEnviarChat != null) {
-            botaoEnviarChat.setOnAction(e -> enviarMensagemChat());
-            campoChat.setOnAction(e -> enviarMensagemChat());
+            botaoEnviarChat.setOnAction(_ -> enviarMensagemChat());
+            campoChat.setOnAction(_ -> enviarMensagemChat());
         }
     }
 
