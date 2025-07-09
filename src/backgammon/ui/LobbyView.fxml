@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.*?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.image.ImageView?>
+
+<StackPane xmlns="http://javafx.com/javafx"
+           xmlns:fx="http://javafx.com/fxml"
+           fx:controller="backgammon.ui.LobbyController">
+
+    <!-- Fundo de imagem -->
+    <ImageView fx:id="backgroundView"
+               fitWidth="1280"
+               fitHeight="720"
+               preserveRatio="false"
+               pickOnBounds="true" />
+
+    <!-- Layout principal -->
+    <VBox alignment="CENTER"
+          spacing="36"
+          style="-fx-padding: 40;">
+        <!-- Labels do estado -->
+        <VBox alignment="CENTER" spacing="8">
+            <Label fx:id="labelEstadoServidor"
+                   text="Servidor: Disponível"
+                   style="-fx-font-size: 28px; -fx-text-fill: white;" />
+
+            <Label fx:id="labelEstadoCliente1"
+                   text="Cliente 1: A conectar..."
+                   style="-fx-font-size: 20px; -fx-text-fill: white;" />
+
+            <Label fx:id="labelEstadoCliente2"
+                   text="Cliente 2: A conectar..."
+                   style="-fx-font-size: 20px; -fx-text-fill: white;" />
+        </VBox>
+
+        <!-- Botão mais afastado -->
+        <Button fx:id="botaoJogar"
+                text="Jogar"
+                onAction="#onJogarClicked"
+                style="-fx-font-size: 24px; -fx-padding: 10 60;" />
+    </VBox>
+</StackPane>

@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="ProjectModuleManager">
@@ -5,4 +6,13 @@
       <module fileurl="file://$PROJECT_DIR$/backgammon.iml" filepath="$PROJECT_DIR$/backgammon.iml" />
     </modules>
   </component>
+=======
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ProjectModuleManager">
+    <modules>
+      <module fileurl="file://$PROJECT_DIR$/Backgammon.iml" filepath="$PROJECT_DIR$/Backgammon.iml" />
+    </modules>
+  </component>
+>>>>>>> d60e6b189d18156adf03f020a910b5efefc4cc7b
 </project>
