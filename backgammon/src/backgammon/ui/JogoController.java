@@ -1034,8 +1034,9 @@ public class JogoController implements Cliente.MessageListener {
             c.setStroke(Color.LIMEGREEN);
             c.setStrokeWidth(3);
             c.setOnMouseClicked(_ -> {
-                campoSelecionado = -1;
+                campoSelecionado = -1; // Use -1 to indicate captured pieces
                 updateBoard();
+                System.out.println("[" + new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()) + "] Peça capturada selecionada (campo -1)");
             });
             pecasCapturadasView.getChildren().add(c);
         }

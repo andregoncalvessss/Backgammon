@@ -204,16 +204,47 @@ public class JogoBackgammon {
         Campo destino = campos.get(campoDestinoId);
         if (destino == null) return false;
 
+        // Handle captured pieces re-entry
         if (jogadorAtual.temPecasCapturadas()) {
+            // Origem must be -1 (captured pieces area) for re-entry
+            if (campoOrigemId != -1) {
+                System.out.println("Erro: Deve mover peça capturada primeiro (origem deve ser -1)");
+                return false;
+            }
+            
             List<Integer> entradasPossiveis = getCamposEntradaDisponiveis();
-            if (!entradasPossiveis.contains(campoDestinoId)) return false;
-            if (!podeMoverPara(destino)) return false;
+            if (!entradasPossiveis.contains(campoDestinoId)) {
+                System.out.println("Campo " + campoDestinoId + " não está disponível para entrada");
+                return false;
+            }
+            
+            if (!podeMoverPara(destino)) {
+                System.out.println("Não é possível mover para o campo " + campoDestinoId);
+                return false;
+            }
 
+            // Calculate movement value for dice usage
+            int valorMovimento = jogadorAtual == jogador1 ? campoDestinoId : 25 - campoDestinoId;
+            if (!jogadorAtual.getDadosDisponiveis().contains(valorMovimento)) {
+                System.out.println("Dado necessário (" + valorMovimento + ") não disponível");
+                return false;
+            }
+
+            // CAPTURE OPPONENT PIECE IF PRESENT
+            if (destino.temPecas() && 
+                destino.getTopo().getJogador() != jogadorAtual &&
+                destino.getPecas().size() == 1) {
+                
+                Peca pecaAdversaria = destino.getTopo();
+                destino.removerPeca(pecaAdversaria);
+                pecaAdversaria.getJogador().capturarPeca(pecaAdversaria);
+                System.out.println("Peça adversária capturada durante reentrada no campo " + campoDestinoId);
+            }
+
+            // Re-enter the captured piece
             Peca pecaReentrada = jogadorAtual.getPecasCapturadas().get(0);
             destino.adicionarPeca(pecaReentrada);
             jogadorAtual.libertarPecaCapturada();
-
-            int valorMovimento = jogadorAtual == jogador1 ? campoDestinoId : 25 - campoDestinoId;
             jogadorAtual.usarDado(valorMovimento);
 
             System.out.println("Peça reintroduzida no campo " + campoDestinoId);
@@ -480,9 +511,20 @@ public class JogoBackgammon {
 
     private boolean podeMoverPara(Campo destino) {
         if (destino == null) return false;
+        
+        // Campo vazio - sempre pode mover
         if (!destino.temPecas()) return true;
-        return destino.getTopo().getJogador() == jogadorAtual ||
-                destino.getPecas().size() == 1;
+        
+        // Campo com peças do próprio jogador - sempre pode mover
+        if (destino.getTopo().getJogador() == jogadorAtual) return true;
+        
+        // Campo com uma peça do adversário - pode mover (captura)
+        if (destino.getTopo().getJogador() != jogadorAtual && destino.getPecas().size() == 1) {
+            return true;
+        }
+        
+        // Campo com múltiplas peças do adversário - não pode mover
+        return false;
     }
 
     private void adicionarPecas(int campoId, Jogador jogador, int quantidade) {
@@ -540,5 +582,61 @@ public class JogoBackgammon {
         } else {
             System.err.println("Erro: Não é possível limpar dados, jogadorAtual é null.");
         }
+    }
+
+    public void exibirEstadoTabuleiro() {
+        System.out.println("Estado atual do tabuleiro:");
+        for (int i = 1; i <= 24; i++) {
+            Campo campo = campos.get(i);
+            if (campo != null) {
+                System.out.print("Campo " + i + ": ");
+                if (campo.temPecas()) {
+                    System.out.print("Peças no campo: ");
+                    for (Peca peca : campo.getPecas()) {
+                        System.out.print("[" + peca.getJogador().getNome() + "] ");
+                    }
+                } else {
+                    System.out.print("Campo vazio");
+                }
+                System.out.println();
+            }
+        }
+        System.out.println("Jogador atual: " + (jogadorAtual != null ? jogadorAtual.getNome() : "Nenhum"));
+    }
+
+    public void exibirDadosJogador(Jogador jogador) {
+        if (jogador != null) {
+            System.out.println("Dados do jogador " + jogador.getNome() + ": " + jogador.getDadosDisponiveis());
+        } else {
+            System.out.println("Jogador inválido.");
+        }
+    }
+
+    public void exibirPecasCapturadas(Jogador jogador) {
+        if (jogador != null) {
+            System.out.println("Peças capturadas do jogador " + jogador.getNome() + ": " + jogador.getPecasCapturadas());
+        } else {
+            System.out.println("Jogador inválido.");
+        }
+    }
+
+    public void exibirTabuleiroComCapturas() {
+        System.out.println("Estado atual do tabuleiro (com capturas):");
+        for (int i = 0; i <= 25; i++) {
+            Campo campo = campos.get(i);
+            if (campo != null) {
+                System.out.print("Campo " + i + ": ");
+                if (campo.temPecas()) {
+                    System.out.print("Peças no campo: ");
+                    for (Peca peca : campo.getPecas()) {
+                        System.out.print("[" + peca.getJogador().getNome() + "] ");
+                    }
+                } else {
+                    System.out.print("Campo vazio");
+                }
+                System.out.println();
+            }
+        }
+        System.out.println("Jogador atual: " + (jogadorAtual != null ? jogadorAtual.getNome() : "Nenhum"));
     }
 }
