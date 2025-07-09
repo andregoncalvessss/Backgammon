@@ -21,6 +21,7 @@ public class Servidor {
     private final Map<String, Long> lastConnectionTimes = new ConcurrentHashMap<>();
     private static final long MIN_CONNECTION_INTERVAL = 5_000; // 5 seconds
     private static final long SORTEIO_TIMEOUT = 0_000; // 60 seconds for sortition
+    private final AtomicBoolean sendingGameState = new AtomicBoolean(false);
 
     public Servidor(int porta, java.util.function.Consumer<String> callback) {
         this.porta = porta;
@@ -192,7 +193,11 @@ public class Servidor {
                                     return;
                                 }
 
+                                // Generate dice values for the current player
                                 jogo.lancarDados();
+                                System.out.println("[" + new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()) + "] Dados lançados para " + finalCliente.nome + ": " + jogo.getJogadorAtual().getDadosDisponiveis());
+
+                                // Notify all clients about the updated game state
                                 sendGameStateToAll();
                             } else {
                                 finalCliente.out.println("COMANDO_INVALIDO:Não é a tua vez.");
@@ -201,6 +206,14 @@ public class Servidor {
                         } else if (comando.equals("PASSAR_TURNO")) {
                             if (jogo != null && jogoJaComecou.get() && finalCliente.nome.equals(jogo.getJogadorAtual().getNome())) {
                                 jogo.verificarEFinalizarTurno();
+
+                                // Ensure the next player's logic is correctly updated
+                                if (jogo.getJogadorAtual() != null) {
+                                    jogo.getJogadorAtual().getDadosDisponiveis().clear();
+                                    jogo.getJogadorAtual().getUltimosDados().clear();
+                                }
+
+                                // Notify all clients about the updated game state
                                 sendGameStateToAll();
                             } else {
                                 finalCliente.out.println("Não é a sua vez.");
@@ -465,46 +478,52 @@ public class Servidor {
     }
 
     private void sendGameStateToAll() {
-        StringBuilder dadosStr = new StringBuilder("DADOS:");
-        List<Integer> ultimosDados = jogo.getJogadorAtual().getUltimosDados();
-        if (!ultimosDados.isEmpty()) {
-            for (Integer dado : ultimosDados) {
-                dadosStr.append(dado).append(",");
-            }
-            dadosStr.deleteCharAt(dadosStr.length() - 1);
+        // Prevent recursive calls
+        if (sendingGameState.get()) {
+            System.out.println("[" + new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()) + "] sendGameStateToAll já em execução, ignorando chamada recursiva");
+            return;
         }
 
-        boolean semDados = jogo.getJogadorAtual().getDadosDisponiveis().isEmpty();
-        boolean semMovimentos = jogo.getCamposComPecasMoveis().isEmpty();
+        sendingGameState.set(true);
+        try {
+            if (jogo == null || jogo.getJogadorAtual() == null) {
+                System.out.println("[" + new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()) + "] Jogo ou jogador atual é null, ignorando sendGameStateToAll");
+                return;
+            }
 
-        // Corrigir: garantir que o jogadorAtual do servidor está sempre sincronizado com o nome do jogador que deve jogar
-        String nomeJogadorAtual = jogo.getJogadorAtual() != null ? jogo.getJogadorAtual().getNome() : null;
-
-        for (ClienteInfo c : new ArrayList<>(clientes)) {
-            try {
-                if (!c.socket.isClosed()) {
-                    // Garante que o comando SUA_VEZ é enviado para o jogador correto
-                    if (nomeJogadorAtual != null && c.nome.equals(nomeJogadorAtual)) {
-                        c.out.println("SUA_VEZ");
-                    } else {
-                        c.out.println("VEZ_ADV");
+            // Ensure the correct player's dice are retrieved
+            List<Integer> dadosDisponiveis = jogo.getJogadorAtual().getDadosDisponiveis();
+            StringBuilder dadosStr = new StringBuilder("DADOS:");
+            if (!dadosDisponiveis.isEmpty()) {
+                for (int i = 0; i < dadosDisponiveis.size(); i++) {
+                    dadosStr.append(dadosDisponiveis.get(i));
+                    if (i < dadosDisponiveis.size() - 1) {
+                        dadosStr.append(",");
                     }
-                    c.out.println(dadosStr.toString());
-                    c.out.flush();
-                    System.out.println("[" + new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()) + "] Enviado para " + c.nome + ": " + (c.nome.equals(nomeJogadorAtual) ? "SUA_VEZ" : "VEZ_ADV") + ", " + dadosStr);
                 }
-            } catch (Exception e) {
-                System.err.println("[" + new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()) + "] Erro ao enviar estado do jogo para " + c.nome + ": " + e.getMessage());
-                handleClientDisconnect(c);
             }
-        }
 
-        // Lógica para passar o turno automaticamente se não houver dados ou movimentos possíveis
-        if ((semDados || semMovimentos) && jogoJaComecou.get()) {
-            System.out.println("[" + new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()) + "] Passando turno automaticamente: sem dados ou sem movimentos possíveis.");
-            jogo.verificarEFinalizarTurno();
-            // Envia novo estado após passar turno
-            sendGameStateToAll();
+            String nomeJogadorAtual = jogo.getJogadorAtual().getNome();
+
+            for (ClienteInfo c : new ArrayList<>(clientes)) {
+                try {
+                    if (!c.socket.isClosed()) {
+                        if (c.nome.equals(nomeJogadorAtual)) {
+                            c.out.println("SUA_VEZ");
+                        } else {
+                            c.out.println("VEZ_ADV");
+                        }
+                        c.out.println(dadosStr.toString());
+                        c.out.flush();
+                        System.out.println("[" + new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()) + "] Enviado para " + c.nome + ": " + (c.nome.equals(nomeJogadorAtual) ? "SUA_VEZ" : "VEZ_ADV") + ", " + dadosStr);
+                    }
+                } catch (Exception e) {
+                    System.err.println("[" + new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()) + "] Erro ao enviar estado do jogo para " + c.nome + ": " + e.getMessage());
+                    handleClientDisconnect(c);
+                }
+            }
+        } finally {
+            sendingGameState.set(false);
         }
     }
 

@@ -279,15 +279,57 @@ public class JogoController implements Cliente.MessageListener {
                     System.out.println("[" + new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()) + "] Processando SUA_VEZ");
                     minhaVez = true;
                     aguardandoInicio = false;
+                    
+                    // Ensure I am the current player in the local game state
+                    if (jogo.getJogadorAtual() == null || !jogo.getJogadorAtual().getNome().equals(meuNome)) {
+                        try {
+                            jogo.definirJogadorInicial(meuNome);
+                            System.out.println("[" + new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()) + "] SUA_VEZ: Forçado jogador atual para " + meuNome);
+                        } catch (Exception e) {
+                            System.err.println("[" + new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()) + "] Erro ao forçar jogador atual: " + e.getMessage());
+                        }
+                    }
+                    
                     updateGame();
-                    labelTurno.setText("É a tua vez!");
-                    botaoLancarDados.setDisable(false);           // Permite lançar dados no início do turno
-                    botaoLancarDados.setText("Lançar Dados");     // Mostra claramente a ação
-                    System.out.println("[" + new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()) + "] Botão Lançar Dados habilitado para início de turno.");
+
+                    // Ensure the player can roll dice if none are available
+                    if (jogo.getJogadorAtual() != null) {
+                        List<Integer> dadosAtual = jogo.getJogadorAtual().getDadosDisponiveis();
+                        if (dadosAtual.isEmpty()) {
+                            botaoLancarDados.setDisable(false);
+                            botaoLancarDados.setText("Lançar Dados");
+                            labelTurno.setText("É a tua vez! Lança os dados.");
+                            System.out.println("[" + new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()) + "] SUA_VEZ: Sem dados disponíveis, habilitando lançamento.");
+                        } else {
+                            botaoLancarDados.setDisable(true);
+                            botaoLancarDados.setText("Jogar");
+                            labelTurno.setText("É a tua vez! Faz uma jogada.");
+                            System.out.println("[" + new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()) + "] SUA_VEZ: Com dados disponíveis: " + dadosAtual);
+                        }
+                    } else {
+                        botaoLancarDados.setDisable(false);
+                        botaoLancarDados.setText("Lançar Dados");
+                        labelTurno.setText("É a tua vez!");
+                        System.out.println("[" + new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()) + "] SUA_VEZ: jogadorAtual é null, habilitando lançamento por segurança.");
+                    }
+
+                    System.out.println("[" + new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()) + "] Botão estado após SUA_VEZ: disabled=" + botaoLancarDados.isDisable() + ", text=" + botaoLancarDados.getText());
                 } else if (estado.equals("VEZ_ADV")) {
                     System.out.println("[" + new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()) + "] Processando VEZ_ADV");
                     minhaVez = false;
                     aguardandoInicio = false;
+                    
+                    // Ensure opponent is the current player in the local game state
+                    String nomeAdversario = getOpponentName();
+                    if (jogo.getJogadorAtual() == null || !jogo.getJogadorAtual().getNome().equals(nomeAdversario)) {
+                        try {
+                            jogo.definirJogadorInicial(nomeAdversario);
+                            System.out.println("[" + new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()) + "] VEZ_ADV: Forçado jogador atual para " + nomeAdversario);
+                        } catch (Exception e) {
+                            System.err.println("[" + new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()) + "] Erro ao forçar jogador atual: " + e.getMessage());
+                        }
+                    }
+                    
                     updateGame();
                     labelTurno.setText("Vez do adversário (" + getOpponentName() + ")");
                     botaoLancarDados.setDisable(true);
@@ -302,7 +344,7 @@ public class JogoController implements Cliente.MessageListener {
                             boolean sucesso = jogo.moverPeca(origem, destino);
                             if (sucesso) {
                                 updateBoard();
-                                checkTurnCompletion(); // Check if turn should end after a move
+                                // Removed: checkTurnCompletion() - don't auto-pass turn when receiving moves from server
                                 System.out.println("[" + new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()) + "] Jogada processada: " + origem + " -> " + destino);
                             }
                         } catch (NumberFormatException e) {
@@ -313,23 +355,52 @@ public class JogoController implements Cliente.MessageListener {
                     System.out.println("[" + new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()) + "] Processando DADOS: " + estado);
                     String[] split = estado.split(":", 2);
                     boolean dadosVazios = split.length < 2 || split[1].isBlank();
+
                     if (dadosVazios) {
-                        System.out.println("Ignorar DADOS: dados vazios.");
-                        // Corrigido: NÃO passe o turno automaticamente se os dados vierem vazios.
-                        // O servidor deve enviar SUA_VEZ/VEZ_ADV para controlar o turno.
-                        // Apenas reabilite o botão para lançar dados novamente se for a sua vez.
+                        System.out.println("[" + new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()) + "] DADOS vazios recebidos.");
+
+                        // Clear dice display when empty dice are received
+                        if (jogo.getJogadorAtual() != null) {
+                            jogo.getJogadorAtual().getDadosDisponiveis().clear();
+                            jogo.getJogadorAtual().getUltimosDados().clear();
+                        }
+                        updateVisibleDice();
+
+                        // If it's my turn and no dice, enable dice rolling
                         if (minhaVez && !aguardandoInicio) {
                             botaoLancarDados.setDisable(false);
                             botaoLancarDados.setText("Lançar Dados");
                             labelTurno.setText("É a tua vez! Lança os dados.");
+                            System.out.println("[" + new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()) + "] DADOS vazios: Habilitando lançamento - minhaVez=" + minhaVez + ", aguardandoInicio=" + aguardandoInicio);
+                        } else {
+                            System.out.println("[" + new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()) + "] DADOS vazios: NÃO habilitando lançamento - minhaVez=" + minhaVez + ", aguardandoInicio=" + aguardandoInicio);
                         }
                         return;
                     }
+
+                    // Critical: Ensure the correct player is current before processing dice
+                    if (minhaVez && (jogo.getJogadorAtual() == null || !jogo.getJogadorAtual().getNome().equals(meuNome))) {
+                        try {
+                            jogo.definirJogadorInicial(meuNome);
+                            System.out.println("[" + new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()) + "] DADOS: Corrigido jogador atual para " + meuNome);
+                        } catch (Exception e) {
+                            System.err.println("[" + new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()) + "] Erro ao corrigir jogador atual: " + e.getMessage());
+                        }
+                    } else if (!minhaVez && (jogo.getJogadorAtual() == null || !jogo.getJogadorAtual().getNome().equals(getOpponentName()))) {
+                        try {
+                            jogo.definirJogadorInicial(getOpponentName());
+                            System.out.println("[" + new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()) + "] DADOS: Corrigido jogador atual para " + getOpponentName());
+                        } catch (Exception e) {
+                            System.err.println("[" + new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()) + "] Erro ao corrigir jogador atual: " + e.getMessage());
+                        }
+                    }
+
                     if (jogo.getJogadorAtual() == null) {
                         System.err.println("[" + new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()) + "] Erro: jogadorAtual é null ao processar DADOS: " + estado);
                         addChatMessage("Erro: Jogador atual não inicializado. Aguardando inicialização.");
                         return;
                     }
+
                     try {
                         String[] valores = split.length > 1 ? split[1].split(",") : new String[0];
                         List<Integer> dados = new ArrayList<>();
@@ -342,37 +413,54 @@ public class JogoController implements Cliente.MessageListener {
                                 }
                             }
                         }
-                        System.out.println("[" + new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()) + "] Jogador atual: " + jogo.getJogadorAtual().getNome() + ", Dados recebidos: " + dados);
+
+                        System.out.println("[" + new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()) + "] Jogador atual: " + jogo.getJogadorAtual().getNome() + ", Dados recebidos: " + dados + ", minhaVez: " + minhaVez);
+
+                        // Clear and set new dice
                         jogo.getJogadorAtual().getDadosDisponiveis().clear();
                         jogo.getJogadorAtual().getUltimosDados().clear();
                         dados.forEach(d -> {
                             jogo.getJogadorAtual().getDadosDisponiveis().add(d);
                             jogo.getJogadorAtual().getUltimosDados().add(d);
                         });
-                        updateVisibleDice();
-                        updateBoard();
 
-                        // Só aqui, após receber os dados, verifica se há jogadas possíveis
+                        // Force recalculation of movable fields after setting dice
+                        if (!dados.isEmpty()) {
+                            jogo.iniciarTurno(); // This will recalculate movable fields with new dice
+                            System.out.println("[" + new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()) + "] Campos móveis recalculados: " + jogo.getCamposComPecasMoveis());
+                        }
+
+                        updateVisibleDice();
+                        updateBoard(); // This should now highlight the correct pieces
+
+                        // Handle dice logic for current player
                         if (minhaVez && !aguardandoInicio) {
                             if (dados.isEmpty()) {
+                                // No dice received - allow rolling
                                 botaoLancarDados.setDisable(false);
                                 botaoLancarDados.setText("Lançar Dados");
                                 labelTurno.setText("É a tua vez! Lança os dados.");
+                                System.out.println("[" + new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()) + "] Sem dados recebidos - permitindo lançamento.");
                             } else {
+                                // Dice received - check for moves
                                 botaoLancarDados.setDisable(true);
                                 botaoLancarDados.setText("Jogar");
-                                labelTurno.setText("É a tua vez!");
-                                // Verifica se há jogadas possíveis APÓS receber os dados
-                                if (jogo.getCamposComPecasMoveis().isEmpty()) {
-                                    System.out.println("[" + new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()) + "] Sem jogadas possíveis após lançar dados. Passando turno.");
-                                    jogo.limparDadosJogadorAtual();
-                                    checkTurnCompletion();
-                                }
+                                labelTurno.setText("É a tua vez! Faz uma jogada.");
+                                System.out.println("[" + new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()) + "] Dados recebidos - peças jogáveis: " + jogo.getCamposComPecasMoveis());
+                            }
+                        } else if (!minhaVez && !aguardandoInicio) {
+                            // Not my turn - just display the dice
+                            botaoLancarDados.setDisable(true);
+                            botaoLancarDados.setText("Aguardar Vez");
+                            if (!dados.isEmpty()) {
+                                labelTurno.setText("Vez do adversário - dados: " + dados);
                             }
                         }
+
                         System.out.println("[" + new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()) + "] Dados aplicados com sucesso: " + dados);
                     } catch (Exception e) {
                         System.err.println("[" + new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()) + "] Erro ao processar DADOS: " + estado + ", motivo: " + e.getMessage());
+                        e.printStackTrace();
                     }
                 } else if (estado.equals("MOVIMENTO_INVALIDO")) {
                     System.out.println("[" + new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()) + "] Processando MOVIMENTO_INVALIDO");
@@ -438,9 +526,13 @@ public class JogoController implements Cliente.MessageListener {
                 String corDisplay = cor != null ? (cor.equals("BRANCO") ? "Brancas" : "Vermelhas") : "Jogador";
                 labelTurno.setText("SUA VEZ (" + corDisplay + ")");
                 labelTurno.setStyle("-fx-font-size: 30px; -fx-text-fill: white; -fx-font-weight: bold;");
-                botaoLancarDados.setDisable(false);
-                botaoLancarDados.setText("Lançar Dados");
-                System.out.println("[" + new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()) + "] Atualizado turno: Minha vez (" + corDisplay + ").");
+
+                // Check if player needs to roll dice
+                boolean needsToRoll = jogo.getJogadorAtual() == null || jogo.getJogadorAtual().getDadosDisponiveis().isEmpty();
+                botaoLancarDados.setDisable(!needsToRoll);
+                botaoLancarDados.setText(needsToRoll ? "Lançar Dados" : "Jogar");
+
+                System.out.println("[" + new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()) + "] updateLabelTurno: Minha vez - needsToRoll=" + needsToRoll + ", dadosDisponiveis=" + (jogo.getJogadorAtual() != null ? jogo.getJogadorAtual().getDadosDisponiveis().size() : "null"));
             } else {
                 String corAdv = cor != null ? (cor.equals("BRANCO") ? "Vermelhas" : "Brancas") : "Adversário";
                 String nomeAdv = getOpponentName();
@@ -462,11 +554,18 @@ public class JogoController implements Cliente.MessageListener {
     @FXML
     private void rollDice() {
         synchronized (lock) {
+            System.out.println("[" + new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()) + "] rollDice chamado - minhaVez=" + minhaVez + ", aguardandoInicio=" + aguardandoInicio + ", botaoDisabled=" + botaoLancarDados.isDisable());
+
             if (!minhaVez) {
                 System.out.println("[" + new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()) + "] Tentativa de lançar dados ignorada: Não é minha vez.");
                 return;
             }
+
+            // Ensure the button is re-enabled if stuck
+            botaoLancarDados.setDisable(false);
+
             if (aguardandoInicio) {
+                // Sortition phase logic
                 if (!botaoLancarDados.getText().equals("Lançar Dados para Sorteio")) {
                     System.out.println("[" + new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()) + "] Tentativa de lançar dados ignorada: Não está na fase de sorteio.");
                     return;
@@ -513,20 +612,47 @@ public class JogoController implements Cliente.MessageListener {
                 });
                 timeline.play();
             } else {
-                // Corrigido: NÃO limpe os dados do jogador aqui!
+                // Game phase - ensure we can roll dice
+                System.out.println("[" + new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()) + "] Lançando dados no jogo. Estado atual: minhaVez=" + minhaVez + ", aguardandoInicio=" + aguardandoInicio);
+
+                // Check if we should be able to roll
+                if (jogo.getJogadorAtual() != null && !jogo.getJogadorAtual().getDadosDisponiveis().isEmpty()) {
+                    System.out.println("[" + new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()) + "] Ignorando rollDice: jogador já tem dados disponíveis.");
+                    labelTurno.setText("Já lançaste os dados! Faz uma jogada.");
+                    return;
+                }
+
+                // Disable button immediately
                 botaoLancarDados.setDisable(true);
-                System.out.println("[" + new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()) + "] Botão Lançar Dados desabilitado durante lançamento de jogo.");
-                // Removido: jogo.limparDadosJogadorAtual();
+                botaoLancarDados.setText("Lançando...");
+                labelTurno.setText("Lançando dados...");
+
+                // Animate dice rolling
                 animateDice();
+
+                // Send command to server
                 if (cliente != null && cliente.isConectado()) {
                     cliente.enviarComando("LANCAR");
-                    System.out.println("[" + new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()) + "] Enviado comando LANCAR");
-                    // Corrigido: NÃO altere minhaVez aqui!
-                    // updateLabelTurno(); // Opcional: pode deixar para o servidor controlar
+                    System.out.println("[" + new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()) + "] Enviado comando LANCAR para o servidor");
+                    
+                    // Set timeout to recover from stuck state after turn passing
+                    Timeline timeout = new Timeline(new KeyFrame(Duration.seconds(5), _ -> {
+                        if (minhaVez && !aguardandoInicio && 
+                            (jogo.getJogadorAtual() == null || jogo.getJogadorAtual().getDadosDisponiveis().isEmpty()) && 
+                            botaoLancarDados.getText().equals("Lançando...")) {
+                            System.out.println("[" + new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()) + "] Timeout lançando dados após passar turno. Reativando botão.");
+                            botaoLancarDados.setDisable(false);
+                            botaoLancarDados.setText("Lançar Dados");
+                            labelTurno.setText("É a tua vez! Lança os dados.");
+                        }
+                    }));
+                    timeout.setCycleCount(1);
+                    timeout.play();
                 } else {
                     labelTurno.setText("Erro: Não conectado ao servidor.");
                     System.err.println("[" + new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()) + "] Erro: Cliente não conectado ao enviar LANCAR");
-                    botaoLancarDados.setDisable(true);
+                    botaoLancarDados.setDisable(false);
+                    botaoLancarDados.setText("Lançar Dados");
                 }
             }
         }
@@ -559,6 +685,13 @@ public class JogoController implements Cliente.MessageListener {
             cliente.enviarComando("MOVER " + origem + " " + destinoId);
             System.out.println("[" + new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()) + "] Enviado comando MOVER: " + origem + " -> " + destinoId);
             campoSelecionado = null;
+
+            // Remove automatic turn completion check - let server handle it
+            // Timeline delayedCheck = new Timeline(new KeyFrame(Duration.millis(500), _ -> {
+            //     checkTurnCompletion();
+            // }));
+            // delayedCheck.setCycleCount(1);
+            // delayedCheck.play();
         } else {
             labelTurno.setText("Erro: Não conectado ao servidor.");
             System.err.println("[" + new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()) + "] Erro: Cliente não conectado ao enviar MOVER");
@@ -570,6 +703,33 @@ public class JogoController implements Cliente.MessageListener {
             System.out.println("[" + new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()) + "] Seleção de campo ignorada: Não é minha vez.");
             return;
         }
+        
+        // Check if this field has movable pieces before allowing selection
+        List<Integer> camposMoveis = jogo.getCamposComPecasMoveis();
+        if (!camposMoveis.contains(campoId)) {
+            System.out.println("[" + new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()) + "] Campo " + campoId + " não está na lista de campos móveis: " + camposMoveis);
+            return;
+        }
+        
+        // Check if the top piece belongs to me
+        Campo campo = jogo.getCampo(campoId);
+        if (campo == null || campo.getPecas().isEmpty()) {
+            System.out.println("[" + new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()) + "] Campo " + campoId + " está vazio.");
+            return;
+        }
+        
+        Peca topPiece = campo.getPecas().get(campo.getPecas().size() - 1);
+        if (!topPiece.getJogador().getNome().equals(meuNome)) {
+            System.out.println("[" + new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()) + "] Peça do topo no campo " + campoId + " não é minha. Dono: " + topPiece.getJogador().getNome() + ", Meu nome: " + meuNome);
+            return;
+        }
+        
+        // Check if I'm the current player
+        if (jogo.getJogadorAtual() == null || !jogo.getJogadorAtual().getNome().equals(meuNome)) {
+            System.out.println("[" + new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()) + "] Não sou o jogador atual. Jogador atual: " + (jogo.getJogadorAtual() != null ? jogo.getJogadorAtual().getNome() : "null") + ", Meu nome: " + meuNome);
+            return;
+        }
+        
         campoSelecionado = campoId;
         updateBoard();
         System.out.println("[" + new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()) + "] Campo selecionado: " + campoId);
@@ -746,6 +906,12 @@ public class JogoController implements Cliente.MessageListener {
             isMinhaVezLocal = minhaVez;
         }
 
+        // Get movable fields from the game logic
+        List<Integer> camposMoveis = jogo.getCamposComPecasMoveis();
+        String jogadorAtualNome = jogo.getJogadorAtual().getNome();
+        
+        System.out.println("[" + new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()) + "] updateBoard: jogadorAtual=" + jogadorAtualNome + ", meuNome=" + meuNome + ", minhaVez=" + isMinhaVezLocal + ", camposMoveis=" + camposMoveis);
+
         for (var entry : campoPecasMap.entrySet()) {
             int campoId = entry.getKey();
             StackPane container = entry.getValue();
@@ -764,11 +930,21 @@ public class JogoController implements Cliente.MessageListener {
                 boolean selecionada = campoSelecionado != null && campoSelecionado == campoId && topo;
                 boolean temCapturada = jogo.getJogadorAtual().temPecasCapturadas();
 
+                // Check if this piece can be moved - must be my turn, my piece, on top, and in movable fields
+                boolean minhaP = peca.getJogador().getNome().equals(meuNome);
+                boolean jogadorAtualEhMeu = jogadorAtualNome.equals(meuNome);
+                boolean campoEhMovel = camposMoveis.contains(campoId);
+                
                 boolean jogavel = isMinhaVezLocal
-                        && !temCapturada
-                        && jogo.getCamposComPecasMoveis().contains(campoId)
-                        && topo
-                        && peca.getJogador().getNome().equals(meuNome);
+                        && jogadorAtualEhMeu  // I must be the current player
+                        && minhaP             // The piece must be mine
+                        && !temCapturada      // No captured pieces
+                        && campoEhMovel       // Field must be in movable fields list
+                        && topo;              // Must be top piece
+
+                if (jogavel) {
+                    System.out.println("[" + new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()) + "] Peça jogável no campo " + campoId + ": minhaVez=" + isMinhaVezLocal + ", jogadorAtualEhMeu=" + jogadorAtualEhMeu + ", minhaP=" + minhaP + ", campoEhMovel=" + campoEhMovel + ", topo=" + topo);
+                }
 
                 Circle c = new Circle(selecionada ? raioSelecionado : raioBase);
                 c.setFill(peca.getJogador() == jogo.getJogador1() ? Color.WHITE : Color.RED);
@@ -869,11 +1045,28 @@ public class JogoController implements Cliente.MessageListener {
     private void updateVisibleDice() {
         if (jogo.getJogadorAtual() == null) {
             System.out.println("[" + new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()) + "] updateVisibleDice ignorado: jogadorAtual é null.");
+            // Clear all dice displays when no current player
+            dado1View.setImage(null);
+            dado2View.setImage(null);
+            if (dado3View != null) {
+                dado3View.setVisible(false);
+                dado3View.setImage(null);
+            }
+            if (dado4View != null) {
+                dado4View.setVisible(false);
+                dado4View.setImage(null);
+            }
             return;
         }
+
         List<Integer> dados = jogo.getJogadorAtual().getDadosDisponiveis();
+        System.out.println("[" + new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()) + "] Atualizando exibição de dados: " + dados);
+
+        // Update main dice displays
         dado1View.setImage(getDiceImage(dados.size() > 0 ? dados.get(0) : 0));
         dado2View.setImage(getDiceImage(dados.size() > 1 ? dados.get(1) : 0));
+
+        // Update additional dice for doubles
         if (dado3View != null) {
             if (dados.size() > 2) {
                 dado3View.setVisible(true);
@@ -948,36 +1141,65 @@ public class JogoController implements Cliente.MessageListener {
         List<Integer> camposMoveis = jogo.getCamposComPecasMoveis();
 
         boolean allDiceUsed = dadosDisponiveis.isEmpty();
-        boolean noMovesPossible = camposMoveis.isEmpty() || !canMakeAnyMoveInternal();
+        boolean noMovesPossible = camposMoveis.isEmpty();
 
-        // Só passa o turno se não houver dados OU não houver movimentos possíveis APÓS o jogador tentar jogar
+        System.out.println("[" + new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()) + "] checkTurnCompletion: allDiceUsed=" + allDiceUsed + ", noMovesPossible=" + noMovesPossible + ", dadosDisponiveis=" + dadosDisponiveis.size() + ", camposMoveis=" + camposMoveis.size());
+
+        // Only pass turn if all dice are used OR if there are truly no moves possible
         if (allDiceUsed || noMovesPossible) {
             if (cliente != null && cliente.isConectado()) {
                 cliente.enviarComando("PASSAR_TURNO");
-                System.out.println("[" + new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()) + "] Enviado comando PASSAR_TURNO");
+                System.out.println("[" + new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()) + "] Enviado comando PASSAR_TURNO - motivo: " + (allDiceUsed ? "dados esgotados" : "sem movimentos possíveis"));
+
+                // Disable dice button and update UI to show turn is ending
+                botaoLancarDados.setDisable(true);
+                botaoLancarDados.setText("Aguardando...");
+                labelTurno.setText("Turno concluído. Aguardando adversário...");
             } else {
                 labelTurno.setText("Erro: Não conectado ao servidor.");
                 System.err.println("[" + new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()) + "] Erro: Cliente não conectado ao enviar PASSAR_TURNO");
             }
-            // Não atualize minhaVez aqui! Aguarde mensagem SUA_VEZ/VEZ_ADV do servidor.
+        } else {
+            System.out.println("[" + new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()) + "] Turno não será passado - ainda há dados ou movimentos possíveis");
         }
     }
 
-    // Renomeado para evitar conflito com outro método
+    // Improved move validation
     private boolean canMakeAnyMoveInternal() {
         if (jogo.getJogadorAtual() == null) return false;
+
         List<Integer> dados = new ArrayList<>(jogo.getJogadorAtual().getDadosDisponiveis());
+        if (dados.isEmpty()) return false;
+
         List<Integer> campos = jogo.getCamposComPecasMoveis();
 
+        // Check if player has captured pieces that need to be moved first
+        if (jogo.getJogadorAtual().temPecasCapturadas()) {
+            List<Integer> entradaDisponiveis = jogo.getCamposEntradaDisponiveis();
+            boolean canEnter = !entradaDisponiveis.isEmpty();
+            System.out.println("[" + new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()) + "] Verificando peças capturadas: " + canEnter);
+            return canEnter;
+        }
+
+        // Check each field with movable pieces
         for (int campo : campos) {
-            for (int dado : dados) {
-                if (jogo.getDestinosValidos(campo).contains(campo + (jogo.getJogadorAtual() == jogo.getJogador1() ? dado : -dado))) {
-                    return true;
-                }
+            List<Integer> destinosValidos = jogo.getDestinosValidos(campo);
+            if (!destinosValidos.isEmpty()) {
+                System.out.println("[" + new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()) + "] Campo " + campo + " tem destinos válidos: " + destinosValidos.size());
+                return true;
             }
         }
+
+        System.out.println("[" + new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()) + "] Nenhum movimento possível encontrado");
         return false;
     }
 
-    // Removido switchPlayer duplicado
+    // Add manual turn pass button functionality (optional)
+    @FXML
+    private void manualPassTurn() {
+        if (isMinhaVez() && !aguardandoInicio) {
+            System.out.println("[" + new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()) + "] Jogador solicitou passar turno manualmente");
+            checkTurnCompletion();
+        }
+    }
 }
