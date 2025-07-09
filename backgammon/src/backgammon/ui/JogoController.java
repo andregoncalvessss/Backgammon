@@ -12,7 +12,9 @@ import javafx.fxml.FXML;
 import javafx.geometry.Bounds;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
+import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
+import javafx.scene.control.ButtonType;
 import javafx.scene.control.Label;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.TextField;
@@ -74,6 +76,9 @@ public class JogoController implements Cliente.MessageListener {
     private String meuNome;
     private String cor;
 
+    private volatile boolean jogoTerminado = false;
+    private String vencedor = null;
+
     public JogoController() {
         aguardandoInicio = true;
     }
@@ -83,6 +88,7 @@ public class JogoController implements Cliente.MessageListener {
         this.cliente.setMessageListener(this);
         Socket socket = cliente.getSocket();
         if (socket != null && socket.isConnected()) {
+            System.out.println("[" + new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()) + "] JogoController conectado ao socket: " + socket.getInetAddress());
             System.out.println("[" + new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()) + "] JogoController conectado ao socket: " + socket.getInetAddress());
         } else {
             throw new IOException("Socket não conectado.");
@@ -516,6 +522,15 @@ public class JogoController implements Cliente.MessageListener {
 
     private void updateLabelTurno() {
         synchronized (lock) {
+            if (jogoTerminado && vencedor != null) {
+                // Game ended - show winner and restart option
+                labelTurno.setText("🏆 " + vencedor + " VENCEU! 🏆");
+                labelTurno.setStyle("-fx-font-size: 28px; -fx-text-fill: gold; -fx-font-weight: bold;");
+                botaoLancarDados.setText("Jogar Novamente");
+                botaoLancarDados.setDisable(false);
+                return;
+            }
+            
             if (aguardandoInicio) {
                 labelTurno.setText(minhaVez ? "É a tua vez de lançar os dados para o sorteio." : "Aguardando resultado do sorteio...");
                 botaoLancarDados.setDisable(!minhaVez);
@@ -554,7 +569,13 @@ public class JogoController implements Cliente.MessageListener {
     @FXML
     private void rollDice() {
         synchronized (lock) {
-            System.out.println("[" + new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()) + "] rollDice chamado - minhaVez=" + minhaVez + ", aguardandoInicio=" + aguardandoInicio + ", botaoDisabled=" + botaoLancarDados.isDisable());
+            System.out.println("[" + new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()) + "] rollDice chamado - minhaVez=" + minhaVez + ", aguardandoInicio=" + aguardandoInicio + ", botaoDisabled=" + botaoLancarDados.isDisable() + ", jogoTerminado=" + jogoTerminado);
+
+            // Check if game ended and restart is requested
+            if (jogoTerminado && botaoLancarDados.getText().equals("Jogar Novamente")) {
+                restartGame();
+                return;
+            }
 
             if (!minhaVez) {
                 System.out.println("[" + new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()) + "] Tentativa de lançar dados ignorada: Não é minha vez.");
@@ -685,6 +706,15 @@ public class JogoController implements Cliente.MessageListener {
             cliente.enviarComando("MOVER " + origem + " " + destinoId);
             System.out.println("[" + new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()) + "] Enviado comando MOVER: " + origem + " -> " + destinoId);
             campoSelecionado = null;
+
+            // Check for victory after move
+            Platform.runLater(() -> {
+                Timeline delayedCheck = new Timeline(new KeyFrame(Duration.millis(500), _ -> {
+                    checkVictory();
+                }));
+                delayedCheck.setCycleCount(1);
+                delayedCheck.play();
+            });
 
             // Remove automatic turn completion check - let server handle it
             // Timeline delayedCheck = new Timeline(new KeyFrame(Duration.millis(500), _ -> {
@@ -887,6 +917,11 @@ public class JogoController implements Cliente.MessageListener {
         if (jogo.getJogadorAtual() == null) {
             System.out.println("[" + new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()) + "] updateBoard ignorado: jogadorAtual é null.");
             return;
+        }
+
+        // Check for victory after updating board
+        if (!jogoTerminado) {
+            checkVictory();
         }
 
         double raioBase = Math.max(16, tabuleiroContainer.getHeight() * 0.032);
@@ -1201,6 +1236,172 @@ public class JogoController implements Cliente.MessageListener {
         if (isMinhaVez() && !aguardandoInicio) {
             System.out.println("[" + new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()) + "] Jogador solicitou passar turno manualmente");
             checkTurnCompletion();
+        }
+    }
+
+    private boolean checkVictory() {
+        if (jogoTerminado) return true;
+
+        // Check if player 1 (white pieces) has won
+        boolean player1Won = true;
+        for (int i = 1; i <= 24; i++) {
+            Campo campo = jogo.getCampo(i);
+            if (campo != null && !campo.getPecas().isEmpty()) {
+                for (Peca peca : campo.getPecas()) {
+                    if (peca.getJogador() == jogo.getJogador1()) {
+                        player1Won = false;
+                        break;
+                    }
+                }
+                if (!player1Won) break;
+            }
+        }
+        
+        // Check captured pieces for player 1
+        if (player1Won && jogo.getJogador1() != null && !jogo.getJogador1().getPecasCapturadas().isEmpty()) {
+            player1Won = false;
+        }
+
+        // Check if player 2 (red pieces) has won
+        boolean player2Won = true;
+        for (int i = 1; i <= 24; i++) {
+            Campo campo = jogo.getCampo(i);
+            if (campo != null && !campo.getPecas().isEmpty()) {
+                for (Peca peca : campo.getPecas()) {
+                    if (peca.getJogador() == jogo.getJogador2()) {
+                        player2Won = false;
+                        break;
+                    }
+                }
+                if (!player2Won) break;
+            }
+        }
+
+        // Check captured pieces for player 2
+        if (player2Won && jogo.getJogador2() != null && !jogo.getJogador2().getPecasCapturadas().isEmpty()) {
+            player2Won = false;
+        }
+
+        if (player1Won) {
+            handleVictory(jogo.getJogador1().getNome());
+            return true;
+        } else if (player2Won) {
+            handleVictory(jogo.getJogador2().getNome());
+            return true;
+        }
+
+        return false;
+    }
+
+    private void handleVictory(String winnerName) {
+        jogoTerminado = true;
+        vencedor = winnerName;
+        
+        System.out.println("[" + new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()) + "] Jogo terminado! Vencedor: " + winnerName);
+        
+        // Show victory popup
+        Platform.runLater(() -> {
+            showVictoryPopup(winnerName);
+            
+            // Update UI to reflect victory state
+            updateLabelTurno();
+            
+            // Add victory message to chat
+            addChatMessage("🏆 VITÓRIA! " + winnerName + " venceu o jogo! 🏆");
+            
+            // Show special victory message if I won
+            if (winnerName.equals(meuNome)) {
+                addChatMessage("🎉 Parabéns! Venceste o jogo! 🎉");
+            } else {
+                addChatMessage("😔 " + winnerName + " venceu. Boa sorte na próxima! 🍀");
+            }
+        });
+    }
+
+    private void showVictoryPopup(String winnerName) {
+        Alert alert = new Alert(Alert.AlertType.INFORMATION);
+        alert.setTitle("🏆 Jogo Terminado 🏆");
+        alert.setHeaderText("VITÓRIA!");
+        alert.setContentText("Vencedor do Jogo: " + winnerName + 
+            (winnerName.equals(meuNome) ? "\n\n🎉 Parabéns! 🎉" : "\n\n🍀 Boa sorte na próxima! 🍀"));
+        
+        // Style the alert
+        alert.getDialogPane().setStyle(
+            "-fx-background-color: linear-gradient(to bottom, #2c3e50, #34495e); " +
+            "-fx-text-fill: white; " +
+            "-fx-font-size: 16px; " +
+            "-fx-font-weight: bold; " +
+            "-fx-padding: 20px;"
+        );
+        
+        // Add custom button
+        ButtonType jogarNovamenteButton = new ButtonType("🔄 Jogar Novamente");
+        ButtonType fecharButton = new ButtonType("❌ Fechar");
+        alert.getButtonTypes().setAll(jogarNovamenteButton, fecharButton);
+        
+        alert.showAndWait().ifPresent(response -> {
+            if (response == jogarNovamenteButton) {
+                restartGame();
+            }
+        });
+    }
+
+    private void restartGame() {
+        System.out.println("[" + new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()) + "] Reiniciando jogo...");
+        
+        // Store winner info for final message
+        String ultimoVencedor = vencedor;
+        
+        // Reset game state
+        jogoTerminado = false;
+        vencedor = null;
+        minhaVez = false;
+        aguardandoInicio = true;
+        campoSelecionado = null;
+        
+        // Clear dice displays
+        dado1View.setImage(null);
+        dado2View.setImage(null);
+        if (dado3View != null) {
+            dado3View.setVisible(false);
+            dado3View.setImage(null);
+        }
+        if (dado4View != null) {
+            dado4View.setVisible(false);
+            dado4View.setImage(null);
+        }
+        
+        // Hide bearing off outline
+        bearingOffOutline.setVisible(false);
+        
+        // Clear captured pieces view
+        pecasCapturadasView.getChildren().clear();
+        
+        // Reinitialize game with same player names
+        if (nomeJogador1 != null && nomeJogador2 != null) {
+            jogo = new JogoBackgammon();
+            jogo.inicializarJogo(nomeJogador1, nomeJogador2);
+            System.out.println("[" + new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()) + "] Jogo reinicializado com jogadores: " + nomeJogador1 + " e " + nomeJogador2);
+        }
+        
+        // Update UI to reflect restart
+        updateLabelTurno();
+        
+        // Update board to show initial positions
+        updateBoard();
+        
+        // Add restart message to chat with previous winner info
+        addChatMessage("🔄 Jogo reiniciado!");
+        if (ultimoVencedor != null) {
+            addChatMessage("📊 Jogo anterior: " + ultimoVencedor + " foi o vencedor");
+        }
+        addChatMessage("🎯 Nova partida: " + nomeJogador1 + " vs " + nomeJogador2);
+        
+        // If connected to server, request new game
+        if (cliente != null && cliente.isConectado()) {
+            // Send restart command to server if such functionality exists
+            // cliente.enviarComando("REINICIAR_JOGO");
+            System.out.println("[" + new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()) + "] Solicitando novo jogo ao servidor...");
         }
     }
 }
