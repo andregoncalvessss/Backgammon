@@ -523,11 +523,16 @@ public class JogoController implements Cliente.MessageListener {
     private void updateLabelTurno() {
         synchronized (lock) {
             if (jogoTerminado && vencedor != null) {
-                // Game ended - show winner and restart option
-                labelTurno.setText("🏆 " + vencedor + " VENCEU! 🏆");
-                labelTurno.setStyle("-fx-font-size: 28px; -fx-text-fill: gold; -fx-font-weight: bold;");
-                botaoLancarDados.setText("Jogar Novamente");
-                botaoLancarDados.setDisable(false);
+                // Game ended - show winner/loser message
+                if (vencedor.equals(meuNome)) {
+                    labelTurno.setText("🏆 VITÓRIA! 🏆");
+                    labelTurno.setStyle("-fx-font-size: 28px; -fx-text-fill: gold; -fx-font-weight: bold;");
+                } else {
+                    labelTurno.setText("💔 DERROTA! 💔");
+                    labelTurno.setStyle("-fx-font-size: 28px; -fx-text-fill: red; -fx-font-weight: bold;");
+                }
+                botaoLancarDados.setText("Jogo Terminado");
+                botaoLancarDados.setDisable(true);
                 return;
             }
             
@@ -705,7 +710,10 @@ public class JogoController implements Cliente.MessageListener {
             int origem = campoSelecionado;
             cliente.enviarComando("MOVER " + origem + " " + destinoId);
             System.out.println("[" + new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()) + "] Enviado comando MOVER: " + origem + " -> " + destinoId);
+            
+            // Clear selection immediately to prevent double moves
             campoSelecionado = null;
+            updateBoard(); // Update board to remove selection highlighting
 
             // Check for victory after move
             Platform.runLater(() -> {
@@ -731,6 +739,14 @@ public class JogoController implements Cliente.MessageListener {
     private void selectField(int campoId) {
         if (!isMinhaVez()) {
             System.out.println("[" + new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()) + "] Seleção de campo ignorada: Não é minha vez.");
+            return;
+        }
+        
+        // If this field is already selected, deselect it
+        if (campoSelecionado != null && campoSelecionado == campoId) {
+            campoSelecionado = null;
+            updateBoard();
+            System.out.println("[" + new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()) + "] Campo " + campoId + " desselecionado.");
             return;
         }
         
@@ -994,7 +1010,13 @@ public class JogoController implements Cliente.MessageListener {
                     c.setStroke(Color.BLACK);
                     c.setStrokeWidth(1);
                 }
-                c.setOnMouseClicked(_ -> selectField(campoId));
+                
+                // Only add click handler to top pieces that can be selected
+                if (topo && (jogavel || selecionada)) {
+                    c.setOnMouseClicked(_ -> selectField(campoId));
+                } else {
+                    c.setOnMouseClicked(null);
+                }
 
                 double translateY;
                 if (campoId <= 12) {
@@ -1021,7 +1043,7 @@ public class JogoController implements Cliente.MessageListener {
                 } else {
                     triangulo.setStroke(Color.BLACK);
                     triangulo.setStrokeWidth(1);
-                    triangulo.setOnMouseClicked(null);
+                    triangulo.setOnMouseClicked(_ -> selectField(campoId)); // Allow field selection even when not valid destination
                 }
             }
         }
@@ -1307,12 +1329,11 @@ public class JogoController implements Cliente.MessageListener {
             updateLabelTurno();
             
             // Add victory message to chat
-            addChatMessage("🏆 VITÓRIA! " + winnerName + " venceu o jogo! 🏆");
-            
-            // Show special victory message if I won
             if (winnerName.equals(meuNome)) {
+                addChatMessage("🏆 VITÓRIA! " + winnerName + " venceu o jogo! 🏆");
                 addChatMessage("🎉 Parabéns! Venceste o jogo! 🎉");
             } else {
+                addChatMessage("💔 DERROTA! " + winnerName + " venceu o jogo! 💔");
                 addChatMessage("😔 " + winnerName + " venceu. Boa sorte na próxima! 🍀");
             }
         });
@@ -1320,10 +1341,16 @@ public class JogoController implements Cliente.MessageListener {
 
     private void showVictoryPopup(String winnerName) {
         Alert alert = new Alert(Alert.AlertType.INFORMATION);
-        alert.setTitle("🏆 Jogo Terminado 🏆");
-        alert.setHeaderText("VITÓRIA!");
-        alert.setContentText("Vencedor do Jogo: " + winnerName + 
-            (winnerName.equals(meuNome) ? "\n\n🎉 Parabéns! 🎉" : "\n\n🍀 Boa sorte na próxima! 🍀"));
+        
+        if (winnerName.equals(meuNome)) {
+            alert.setTitle("🏆 Jogo Terminado 🏆");
+            alert.setHeaderText("VITÓRIA!");
+            alert.setContentText("Vencedor do Jogo: " + winnerName + "\n\n🎉 Parabéns! 🎉");
+        } else {
+            alert.setTitle("💔 Jogo Terminado 💔");
+            alert.setHeaderText("DERROTA!");
+            alert.setContentText("Vencedor do Jogo: " + winnerName + "\n\n🍀 Boa sorte na próxima! 🍀");
+        }
         
         // Style the alert
         alert.getDialogPane().setStyle(
@@ -1334,74 +1361,15 @@ public class JogoController implements Cliente.MessageListener {
             "-fx-padding: 20px;"
         );
         
-        // Add custom button
-        ButtonType jogarNovamenteButton = new ButtonType("🔄 Jogar Novamente");
+        // Only show close button
         ButtonType fecharButton = new ButtonType("❌ Fechar");
-        alert.getButtonTypes().setAll(jogarNovamenteButton, fecharButton);
+        alert.getButtonTypes().setAll(fecharButton);
         
-        alert.showAndWait().ifPresent(response -> {
-            if (response == jogarNovamenteButton) {
-                restartGame();
-            }
-        });
+        alert.showAndWait();
     }
 
     private void restartGame() {
-        System.out.println("[" + new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()) + "] Reiniciando jogo...");
-        
-        // Store winner info for final message
-        String ultimoVencedor = vencedor;
-        
-        // Reset game state
-        jogoTerminado = false;
-        vencedor = null;
-        minhaVez = false;
-        aguardandoInicio = true;
-        campoSelecionado = null;
-        
-        // Clear dice displays
-        dado1View.setImage(null);
-        dado2View.setImage(null);
-        if (dado3View != null) {
-            dado3View.setVisible(false);
-            dado3View.setImage(null);
-        }
-        if (dado4View != null) {
-            dado4View.setVisible(false);
-            dado4View.setImage(null);
-        }
-        
-        // Hide bearing off outline
-        bearingOffOutline.setVisible(false);
-        
-        // Clear captured pieces view
-        pecasCapturadasView.getChildren().clear();
-        
-        // Reinitialize game with same player names
-        if (nomeJogador1 != null && nomeJogador2 != null) {
-            jogo = new JogoBackgammon();
-            jogo.inicializarJogo(nomeJogador1, nomeJogador2);
-            System.out.println("[" + new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()) + "] Jogo reinicializado com jogadores: " + nomeJogador1 + " e " + nomeJogador2);
-        }
-        
-        // Update UI to reflect restart
-        updateLabelTurno();
-        
-        // Update board to show initial positions
-        updateBoard();
-        
-        // Add restart message to chat with previous winner info
-        addChatMessage("🔄 Jogo reiniciado!");
-        if (ultimoVencedor != null) {
-            addChatMessage("📊 Jogo anterior: " + ultimoVencedor + " foi o vencedor");
-        }
-        addChatMessage("🎯 Nova partida: " + nomeJogador1 + " vs " + nomeJogador2);
-        
-        // If connected to server, request new game
-        if (cliente != null && cliente.isConectado()) {
-            // Send restart command to server if such functionality exists
-            // cliente.enviarComando("REINICIAR_JOGO");
-            System.out.println("[" + new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()) + "] Solicitando novo jogo ao servidor...");
-        }
+        // Remove this method since we no longer need restart functionality
+        System.out.println("[" + new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()) + "] Funcionalidade de reiniciar removida.");
     }
 }

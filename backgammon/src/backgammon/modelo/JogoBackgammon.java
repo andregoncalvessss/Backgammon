@@ -88,9 +88,25 @@ public class JogoBackgammon {
         if (jogadorAtual == null) return;
 
         boolean semDados = jogadorAtual.getDadosDisponiveis().isEmpty();
-        boolean semJogadas = getCamposComPecasMoveis().isEmpty();
+        boolean semJogadas = false;
+        
+        // Check if player has captured pieces but cannot reintroduce them
+        if (jogadorAtual.temPecasCapturadas()) {
+            List<Integer> camposEntrada = getCamposEntradaDisponiveis();
+            semJogadas = camposEntrada.isEmpty();
+            System.out.println("Jogador " + jogadorAtual.getNome() + " tem peças capturadas. Campos de entrada disponíveis: " + camposEntrada.size());
+        } else {
+            // Normal case - check for any possible moves
+            semJogadas = getCamposComPecasMoveis().isEmpty();
+        }
 
         if (semDados || semJogadas) {
+            if (semJogadas && !semDados) {
+                System.out.println("Turno finalizado para " + jogadorAtual.getNome() + " - sem movimentos possíveis");
+            } else {
+                System.out.println("Turno finalizado para " + jogadorAtual.getNome() + " - dados esgotados");
+            }
+            
             jogadorAtual.getDadosDisponiveis().clear();
             jogadorAtual.getUltimosDados().clear();
 
@@ -429,17 +445,25 @@ public class JogoBackgammon {
             System.err.println("Erro: Jogador atual nulo ao verificar campos de entrada.");
             return entradas;
         }
+        
+        if (!jogadorAtual.temPecasCapturadas()) {
+            return entradas; // No captured pieces, no entry fields needed
+        }
+        
         List<Integer> dados = jogadorAtual.getDadosDisponiveis();
-        System.out.println("Campos de entrada para " + jogadorAtual.getNome() + " com dados: " + dados);
+        System.out.println("Verificando campos de entrada para " + jogadorAtual.getNome() + " com dados: " + dados);
 
         for (int dado : dados) {
             int campoEntrada = jogadorAtual == jogador1 ? dado : 25 - dado;
             Campo campo = campos.get(campoEntrada);
             if (campo != null && podeMoverPara(campo)) {
                 entradas.add(campoEntrada);
+                System.out.println("Campo de entrada disponível: " + campoEntrada + " (dado " + dado + ")");
+            } else {
+                System.out.println("Campo de entrada bloqueado: " + campoEntrada + " (dado " + dado + ")");
             }
         }
-        System.out.println("Campos de entrada disponíveis: " + entradas);
+        System.out.println("Campos de entrada disponíveis finais: " + entradas);
         return entradas;
     }
 
